@@ -1,0 +1,211 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><script type="text/javascript">
+    var gk_isXlsx = false;
+    var gk_xlsxFileLookup = {};
+    var gk_fileData = {};
+    function filledCell(cell) {
+      return cell !== '' && cell != null;
+    }
+    function loadFileData(filename) {
+    if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+        try {
+            var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+            var firstSheetName = workbook.SheetNames[0];
+            var worksheet = workbook.Sheets[firstSheetName];
+
+            // Convert sheet to JSON to filter blank rows
+            var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+            // Filter out blank rows (rows where all cells are empty, null, or undefined)
+            var filteredData = jsonData.filter(row => row.some(filledCell));
+
+            // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+            var headerRowIndex = filteredData.findIndex((row, index) =>
+              row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+            );
+            // Fallback
+            if (headerRowIndex === -1 || headerRowIndex > 25) {
+              headerRowIndex = 0;
+            }
+
+            // Convert filtered JSON back to CSV
+            var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+            csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+            return csv;
+        } catch (e) {
+            console.error(e);
+            return "";
+        }
+    }
+    return gk_fileData[filename] || "";
+    }
+
+    // Define the toggle function early in the head
+    function togglePasswordVisibility() {
+        console.log('Toggle password visibility clicked'); // Debug log
+        try {
+            const passwordInput = document.getElementById('password');
+            const eyeIcon = document.getElementById('eye-icon');
+            if (passwordInput && eyeIcon) {
+                passwordInput.type = passwordInput.type === 'password' ? 'text' : 'password';
+                eyeIcon.textContent = passwordInput.type === 'password' ? '👁️' : '🙈'; // Update icon based on state
+                validatePassword(); // Validate password on toggle
+            } else {
+                console.error('Password input or eye icon not found');
+            }
+        } catch (e) {
+            console.error('Error toggling password visibility:', e);
+        }
+    }
+
+    function validatePassword() {
+        const passwordInput = document.getElementById('password');
+        const lengthCheck = document.getElementById('lengthCheck');
+        const capitalCheck = document.getElementById('capitalCheck');
+        const specialCheck = document.getElementById('specialCheck');
+        const numericCheck = document.getElementById('numericCheck');
+
+        if (!passwordInput || !lengthCheck || !capitalCheck || !specialCheck || !numericCheck) {
+            console.error('One or more validation elements not found');
+            return;
+        }
+
+        const password = passwordInput.value;
+        const lengthValid = password.length >= 8;
+        const capitalValid = /[A-Z]/.test(password);
+        const specialValid = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+        const numericValid = /\d/.test(password);
+
+        lengthCheck.style.backgroundColor = lengthValid ? 'green' : 'red';
+        capitalCheck.style.backgroundColor = capitalValid ? 'green' : 'red';
+        specialCheck.style.backgroundColor = specialValid ? 'green' : 'red';
+        numericCheck.style.backgroundColor = numericValid ? 'green' : 'red';
+
+        // Enable/disable submit button based on validation
+        const submitButton = document.querySelector('button[type="submit"]');
+        if (submitButton) {
+            submitButton.disabled = !(lengthValid && capitalValid && specialValid && numericValid);
+        }
+    }
+
+    window.onload = function() {
+        const passwordInput = document.getElementById('password');
+        const eyeIcon = document.getElementById('eye-icon');
+        if (passwordInput && eyeIcon) {
+            eyeIcon.addEventListener('click', togglePasswordVisibility); // Add event listener programmatically
+            passwordInput.addEventListener('input', validatePassword);
+        } else {
+            console.error('Password input or eye icon not found on load');
+        }
+    };
+</script><!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NoteVault - Register</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self';">
+</head>
+<body class="{{ session.get('theme', 'light') }}">
+    <header>
+        <h1>NoteVault - Register</h1>
+        <nav>
+            <a href="{{ url_for('login') }}">Login</a>
+        </nav>
+    </header>
+    <main>
+        <form action="{{ url_for('register') }}" method="POST">
+            <h2>Register</h2>
+            <label for="username">Username:</label>
+            <input type="text" id="username" name="username" required>
+            <label for="email">Email:</label>
+            <input type="email" id="email" name="email" required>
+            <label for="password">Password:</label>
+            <div class="password-container">
+                <input type="password" id="password" name="password" required>
+                <span id="eye-icon" class="eye-icon">👁️</span>
+            </div>
+            <p>Password must include:</p>
+            <p><span id="lengthCheck" class="password-check"></span> 8 characters long</p>
+            <p><span id="capitalCheck" class="password-check"></span> 1 Capital Alphabet</p>
+            <p><span id="specialCheck" class="password-check"></span> 1 Special character</p>
+            <p><span id="numericCheck" class="password-check"></span> 1 Numeric character</p>
+            <button type="submit">Register</button>
+        </form>
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="flash-messages">
+                    {% for category, message in messages %}
+                        <p class="flash-{{ category }}">{{ message }}</p>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+    </main>
+</body>
+<style>
+    .password-check {
+        width: 20px;
+        height: 20px;
+        border: 2px solid #ccc;
+        display: inline-block;
+        margin-right: 10px;
+    }
+    .password-container {
+        position: relative;
+        display: inline-block;
+        width: 100%;
+    }
+    .password-container input {
+        width: 100%;
+        box-sizing: border-box; /* Ensure padding doesn't affect width */
+    }
+    .eye-icon {
+        position: absolute;
+        right: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+        cursor: pointer;
+        z-index: 10; /* Ensure it’s above the input */
+        padding: 5px; /* Add padding for better click area */
+    }
+</style>
+</html>

@@ -1,0 +1,272 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NoteVault - Search Notes</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self';">
+    <style>
+        /* Style to truncate content to 3 lines */
+        .note-content {
+            display: -webkit-box;
+            -webkit-line-clamp: 3; /* Limit to 3 lines */
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            line-height: 1.5em; /* Adjust based on your font size */
+            max-height: 4.5em; /* 3 lines * 1.5em line height */
+            margin: 0;
+        }
+        /* Ensure proper spacing for buttons and share form */
+        .note-actions {
+            margin-top: 10px;
+        }
+        .note-actions a, .note-actions form {
+            margin-right: 10px;
+        }
+        .share-note {
+            margin-top: 15px;
+        }
+        .share-note label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        .share-note input[type="email"] {
+            width: 100%;
+            max-width: 300px;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        .share-note button.button {
+            display: block;
+            width: 100%;
+            max-width: 300px;
+            margin-top: 10px;
+            padding: 8px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .share-note button.button:hover {
+            background-color: #0056b3;
+        }
+        /* Navigation bar alignment */
+        nav {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            flex-wrap: nowrap;
+            padding: 10px 0;
+            margin: 10px 0;
+        }
+        .nav-button {
+            padding: 8px 16px;
+            margin: 0 5px;
+            text-decoration: none;
+            color: white;
+            background-color: #007bff;
+            border-radius: 4px;
+            text-align: center;
+            min-width: 100px; /* Ensure consistent button width */
+            box-sizing: border-box;
+        }
+        .nav-button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+    <script>
+        // Prevent form submission on Enter keypress, except when the submit button is focused
+        function preventEnterSubmit(event) {
+            if (event.keyCode === 13) {
+                const activeElement = document.activeElement;
+                const submitButtons = document.querySelectorAll('button[type="submit"]');
+                // Allow Enter in textarea to add a new line (if present)
+                if (activeElement.tagName.toLowerCase() === 'textarea') {
+                    return true;
+                }
+                // Prevent submission unless a submit button is focused
+                let isSubmitFocused = false;
+                submitButtons.forEach(button => {
+                    if (activeElement === button) isSubmitFocused = true;
+                });
+                if (!isSubmitFocused) {
+                    event.preventDefault();
+                    return false;
+                }
+            }
+        }
+
+        // Apply theme on page load
+        function applyTheme() {
+            const body = document.body;
+            const currentTheme = body.classList.contains('dark') ? 'dark' : 'light';
+            console.log('Applying theme:', currentTheme);
+            body.classList.remove('light', 'dark');
+            body.classList.add(currentTheme);
+        }
+
+        window.onload = function() {
+            applyTheme();
+        };
+    </script>
+    <script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex));
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+    </script>
+</head>
+<body class="{{ session.get('theme', 'light') }}">
+    <header>
+        <h1>NoteVault - Search Notes</h1>
+        <nav>
+            <a href="{{ url_for('index') }}" class="nav-button">Back to Dashboard</a>
+            <a href="{{ url_for('view_notes') }}" class="nav-button">View Notes</a>
+            <a href="{{ url_for('create_note') }}" class="nav-button">Create Note</a>
+            <a href="{{ url_for('search_page') }}" class="nav-button">Search Note</a>
+            <a href="{{ url_for('logout') }}" class="nav-button">Logout</a>
+            <a href="{{ url_for('toggle_theme') }}" class="nav-button">Toggle Theme</a>
+        </nav>
+    </header>
+    <main>
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="flash-messages">
+                    {% for category, message in messages %}
+                        <p class="flash-{{ category }}">{{ message }}</p>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+        <h2>Search Notes</h2>
+        <form action="{{ url_for('search_notes') }}" method="GET" onkeypress="preventEnterSubmit(event)">
+            <label for="query">Search Notes:</label>
+            <input type="text" id="query" name="query" placeholder="Search by title or content">
+            <label for="category">Category:</label>
+            <select id="category" name="category">
+                <option value="">All Categories</option>
+                {% for category in categories %}
+                    <option value="{{ category.name }}">{{ category.name }}</option>
+                {% endfor %}
+            </select>
+            <label for="tag">Tag:</label>
+            <input type="text" id="tag" name="tag" placeholder="Search by tag">
+            <button type="submit" class="button">Search</button>
+        </form>
+        {% if notes is defined %}
+            {% if not notes %}
+                <div class="flash-messages">
+                    <p class="flash-error">No notes found.</p>
+                </div>
+            {% endif %}
+            {% for note in notes %}
+                <div class="note">
+                    <h3>{{ note.title }}</h3>
+                    <p class="note-content">{{ note.content }}</p>
+                    <p><strong>Category:</strong> {{ note.category }}</p>
+                    <p><strong>Tags:</strong> {{ note.tags }}</p>
+                    <p><strong>Created:</strong> {{ note.created_at }}</p>
+                    <p><strong>Collaborators:</strong> {{ note.collaborators }}</p>
+                    {% if note.reminder %}
+                        <p><strong>Reminder:</strong> {{ note.reminder }}</p>
+                    {% endif %}
+                    <div class="note-actions">
+                        <a href="{{ url_for('view_note', note_id=note.id) }}" class="button">View</a>
+                        <a href="{{ url_for('edit_note', note_id=note.id) }}" class="button">Edit</a>
+                        <form action="{{ url_for('delete_note', note_id=note.id) }}" method="POST" style="display:inline;">
+                            <button type="submit" class="button" onclick="return confirm('Are you sure you want to delete this note?');">Delete</button>
+                        </form>
+                    </div>
+                    <div class="share-note">
+                        <h3>Share Note</h3>
+                        <label for="share-email-{{ note.id }}">Email to Share With:</label>
+                        <form action="{{ url_for('share_note', note_id=note.id) }}" method="POST" onkeypress="preventEnterSubmit(event)">
+                            <input type="email" id="share-email-{{ note.id }}" name="email" placeholder="Enter email address" required>
+                            <button type="submit" class="button">Share</button>
+                        </form>
+                    </div>
+                </div>
+            {% endfor %}
+        {% endif %}
+    </main>
+</body>
+</html>

@@ -1,0 +1,27 @@
+
+
+NoteVault/
+├── static/
+│   ├── style.css
+│   ├── script.js
+│   └── static.js
+├── templates/
+│   ├── create_note.html
+│   ├── edit_draft.html
+│   ├── edit_note.html
+│   ├── forgot_password.html
+│   ├── front_page.html
+│   ├── index.html
+│   ├── login.html
+│   ├── notifications.html
+│   ├── register.html
+│   ├── reset_password.html
+│   ├── search_notes.html
+│   ├── settings.html
+│   ├── verify_email.html
+│   ├── view_drafts.html
+│   ├── view_note.html
+│   ├── view_notes.html
+│   └── view_only.html
+├── app.py
+└── requirements.txt

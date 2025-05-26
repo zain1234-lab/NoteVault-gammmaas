@@ -1,0 +1,252 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NoteVault - Create Note</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=1">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline';">
+    <script src="{{ url_for('static', filename='static.js') }}"></script>
+    <script>
+        // Prevent form submission on Enter keypress, except when the submit button is focused
+        function preventEnterSubmit(event) {
+            if (event.keyCode === 13) {
+                const activeElement = document.activeElement;
+                const submitButton = document.getElementById('create-note-button');
+                const saveDraftButton = document.getElementById('save-draft-button');
+                if (activeElement.tagName.toLowerCase() === 'textarea') {
+                    return true;
+                }
+                if (activeElement !== submitButton && activeElement !== saveDraftButton) {
+                    event.preventDefault();
+                    return false;
+                }
+            }
+        }
+
+        // Update character count for the content field
+        function updateCharCount() {
+            const contentField = document.getElementById('content');
+            const charCount = document.getElementById('char-count');
+            const maxChars = 20000;
+            const currentLength = contentField.value.length;
+            charCount.textContent = `${currentLength}/${maxChars}`;
+            if (currentLength > maxChars) {
+                contentField.value = contentField.value.substring(0, maxChars);
+                charCount.textContent = `${maxChars}/${maxChars}`;
+            }
+        }
+
+        // Apply theme on page load
+        function applyTheme() {
+            const body = document.body;
+            const currentTheme = body.classList.contains('dark') ? 'dark' : 'light';
+            console.log('Applying theme:', currentTheme);
+            body.classList.remove('light', 'dark');
+            body.classList.add(currentTheme);
+        }
+
+        // Toggle theme
+        function toggleTheme() {
+            window.location.href = "{{ url_for('toggle_theme') }}";
+        }
+
+        // Save draft via AJAX
+        function saveDraftToServer() {
+            const title = document.getElementById('title').value.trim();
+            const content = document.getElementById('content').value.trim();
+            const category = document.getElementById('category').value;
+            const tags = document.getElementById('tags').value;
+            const collaborators = document.getElementById('collaborators').value;
+            const reminder = document.getElementById('reminder').value;
+
+            if (!title && !content) {
+                return Promise.resolve();
+            }
+
+            const formData = new FormData();
+            formData.append('title', title || 'Untitled Draft');
+            formData.append('content', content || ' ');
+            formData.append('category', category);
+            formData.append('tags', tags);
+            formData.append('collaborators', collaborators);
+            formData.append('reminder', reminder);
+
+            return fetch("{{ url_for('create_draft') }}", {
+                method: 'POST',
+                body: formData,
+                credentials: 'same-origin'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (!data.success) {
+                    console.error('Failed to save draft:', data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error saving draft:', error);
+            });
+        }
+
+        let isSaving = false;
+        let isLoggingOut = false;
+
+        function handleLogout(event) {
+            event.preventDefault();
+            if (isSaving) return;
+
+            isSaving = true;
+            isLoggingOut = true;
+
+            saveDraftToServer().finally(() => {
+                isSaving = false;
+                window.location.href = "{{ url_for('logout') }}";
+            });
+        }
+
+        window.addEventListener('beforeunload', function(event) {
+            if (isLoggingOut) return;
+
+            const title = document.getElementById('title').value.trim();
+            const content = document.getElementById('content').value.trim();
+            if (title || content) {
+                if (!isSaving) {
+                    isSaving = true;
+                    saveDraftToServer().finally(() => {
+                        isSaving = false;
+                    });
+                }
+                const message = "NoteVault: You have unsaved changes. Are you sure you want to leave?";
+                event.returnValue = message;
+                return message;
+            }
+        });
+
+        window.onload = function() {
+            applyTheme();
+            updateCharCount();
+            document.getElementById('logout-link').addEventListener('click', handleLogout);
+        };
+    </script>
+    <style>
+        nav {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            flex-wrap: nowrap;
+            padding: 10px 0;
+            margin: 10px 0;
+        }
+        .nav-button {
+            padding: 8px 16px;
+            margin: 0 5px;
+            text-decoration: none;
+            color: white;
+            background-color: #007bff;
+            border-radius: 4px;
+            text-align: center;
+            min-width: 100px;
+            box-sizing: border-box;
+        }
+        .nav-button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body class="{{ session.get('theme', 'light') }}">
+    <header>
+        <h1>NoteVault - Create Note</h1>
+        <nav>
+            <a href="{{ url_for('index') }}" class="nav-button">Back to Dashboard</a>
+            <a href="{{ url_for('view_notes') }}" class="nav-button">View Notes</a>
+            <a href="{{ url_for('view_drafts') }}" class="nav-button">View Drafts</a>
+            <a href="{{ url_for('search_page') }}" class="nav-button">Search Note</a>
+            <a href="{{ url_for('logout') }}" class="nav-button" id="logout-link">Logout</a>
+            <a href="#" class="nav-button" onclick="toggleTheme()">Toggle Theme</a>
+        </nav>
+    </header>
+    <main>
+        <h2>Create a New Note</h2>
+        <form id="create-note-form" action="{{ url_for('create_note') }}" method="POST" onkeypress="preventEnterSubmit(event)">
+            <label for="title">Title:</label>
+            <input type="text" id="title" name="title" value="{{ title if title else '' }}" required>
+
+            <label for="content">Content:</label>
+            <textarea id="content" name="content" required oninput="updateCharCount()">{{ content if content else '' }}</textarea>
+            <p id="char-count">0/20000</p>
+
+            <label for="category">Category:</label>
+            <select id="category" name="category">
+                <option value="">Select Category</option>
+                <option value="Personal" {{ 'selected' if category == 'Personal' else '' }}>Personal</option>
+                <option value="Work" {{ 'selected' if category == 'Work' else '' }}>Work</option>
+                <option value="Ideas" {{ 'selected' if category == 'Ideas' else '' }}>Ideas</option>
+                <option value="To Do List" {{ 'selected' if category == 'To Do List' else '' }}>To Do List</option>
+                <option value="Plans" {{ 'selected' if category == 'Plans' else '' }}>Plans</option>
+                <option value="Expenditures" {{ 'selected' if category == 'Expenditures' else '' }}>Expenditures</option>
+                <option value="Other" {{ 'selected' if category == 'Other' else '' }}>Other</option>
+            </select>
+
+            <label for="tags">Tags:</label>
+            <input type="text" id="tags" name="tags" value="{{ tags if tags else '' }}">
+
+            <label for="collaborators">Collaborators:</label>
+            <input type="text" id="collaborators" name="collaborators" value="{{ collaborators if collaborators else '' }}">
+
+            <label for="reminder">Reminder (Optional):</label>
+            <input type="datetime-local" id="reminder" name="reminder" value="{{ reminder if reminder else '' }}">
+
+            <button type="submit" id="create-note-button">Create Note</button>
+            <button type="button" id="save-draft-button" onclick="saveDraftToServer()">Save as Draft</button>
+        </form>
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="flash-messages">
+                    {% for category, message in messages %}
+                        <p class="flash-{{ category }}">{{ message }}</p>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+    </main>
+</body>
+</html>

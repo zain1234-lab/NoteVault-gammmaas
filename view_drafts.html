@@ -1,0 +1,203 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex));
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+
+        // Apply theme on page load
+        function applyTheme() {
+            const body = document.body;
+            const currentTheme = body.classList.contains('dark') ? 'dark' : 'light';
+            console.log('Applying theme:', currentTheme);
+            body.classList.remove('light', 'dark');
+            body.classList.add(currentTheme);
+        }
+
+        // Toggle theme
+        function toggleTheme() {
+            window.location.href = "{{ url_for('toggle_theme') }}";
+        }
+
+        window.onload = function() {
+            applyTheme();
+        };
+</script>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NoteVault - View Drafts</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=1">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline';">
+    <style>
+        nav {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            flex-wrap: nowrap;
+            padding: 10px 0;
+            margin: 10px 0;
+        }
+        .nav-button {
+            padding: 8px 16px;
+            margin: 0 5px;
+            text-decoration: none;
+            color: white;
+            background-color: #007bff;
+            border-radius: 4px;
+            text-align: center;
+            min-width: 100px;
+            box-sizing: border-box;
+        }
+        .nav-button:hover {
+            background-color: #0056b3;
+        }
+        .draft-list {
+            list-style-type: none;
+            padding: 0;
+        }
+        .draft-item {
+            border: 1px solid #ddd;
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .no-drafts-message {
+            text-align: center;
+            margin-top: 20%;
+            color: #666;
+        }
+    </style>
+</head>
+<body class="{{ session.get('theme', 'light') }}">
+    <header>
+        <h1>NoteVault - View Drafts</h1>
+        <nav>
+            <a href="{{ url_for('index') }}" class="nav-button">Back to Dashboard</a>
+            <a href="{{ url_for('view_notes') }}" class="nav-button">View Notes</a>
+            <a href="{{ url_for('create_note') }}" class="nav-button">Create Note</a>
+            <a href="{{ url_for('search_page') }}" class="nav-button">Search Note</a>
+            <a href="{{ url_for('logout') }}" class="nav-button">Logout</a>
+            <a href="#" class="nav-button" onclick="toggleTheme()">Toggle Theme</a>
+        </nav>
+    </header>
+    <main>
+        <h2>Your Drafts</h2>
+        {% if not drafts %}
+            <div class="no-drafts-message">
+                <p>You don't have any saved drafts.</p>
+                <p>Saving a draft allows you to keep a message you aren't ready to save yet.</p>
+            </div>
+        {% else %}
+            <ul class="draft-list">
+                {% for draft in drafts %}
+                    <li class="draft-item">
+                        <h3>{{ draft.title }}</h3>
+                        <p>{{ draft.display_content }}</p>
+                        <form action="{{ url_for('save_draft_as_note', draft_id=draft.id) }}" method="post" style="display:inline;">
+                            <button type="submit">Save as Note</button>
+                        </form>
+                        <form action="{{ url_for('edit_draft', draft_id=draft.id) }}" method="get" style="display:inline;">
+                            <button type="submit">Edit</button>
+                        </form>
+                        <form action="{{ url_for('delete_draft', draft_id=draft.id) }}" method="post" style="display:inline;">
+                            <button type="submit">Delete</button>
+                        </form>
+                        <form action="{{ url_for('share_draft', draft_id=draft.id) }}" method="post" style="display:inline;">
+                            <input type="email" name="email" placeholder="Enter email to share" required>
+                            <button type="submit">Share</button>
+                        </form>
+                        <form action="{{ url_for('add_collaborator_to_draft', draft_id=draft.id) }}" method="post" style="display:inline;">
+                            <input type="text" name="collaborator" placeholder="Add collaborator" required>
+                            <button type="submit">Add Collaborator</button>
+                        </form>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="flash-messages">
+                    {% for category, message in messages %}
+                        <p class="flash-{{ category }}">{{ message }}</p>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+    </main>
+</body>
+</html>

@@ -1,0 +1,30 @@
+flask==2.3.3
+flask-sqlalchemy==3.1.1
+flask-bcrypt==1.0.1
+flask-limiter==3.5.0
+flask-mail==0.9.1
+cryptography==42.0.5
+bleach==6.1.0
+
+
+flask==3.0.3
+flask-sqlalchemy==3.1.1
+flask-bcrypt==1.0.1
+flask-limiter==3.7.0
+flask-mailman==0.1.0  # Replaced flask-mail with flask-mailman
+cryptography==42.0.5
+bleach==6.1.0
+flask-migrate==4.1.0  # Added for explicit dependency
+alembic==1.13.2  # Dependency for flask-migrate
+click==8.1.7  # Dependency for flask-migrate and flask
+
+
+flask
+flask-sqlalchemy
+flask-bcrypt
+flask-limiter
+flask-mail
+flask-migrate
+flask-login
+cryptography
+bleach
