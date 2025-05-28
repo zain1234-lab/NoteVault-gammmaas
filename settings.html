@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings - NoteVault</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <script type="text/javascript">
+        // Toggle password visibility for each field
+        function togglePasswordVisibility(fieldId, eyeIconId) {
+            console.log(`Toggle password visibility for ${fieldId}`);
+            try {
+                const passwordInput = document.getElementById(fieldId);
+                const eyeIcon = document.getElementById(eyeIconId);
+                if (passwordInput && eyeIcon) {
+                    passwordInput.type = passwordInput.type === 'password' ? 'text' : 'password';
+                    eyeIcon.textContent = '👁️';
+                } else {
+                    console.error(`Password input (${fieldId}) or eye icon (${eyeIconId}) not found`);
+                }
+            } catch (e) {
+                console.error('Error toggling password visibility:', e);
+            }
+        }
+
+        // Password validation
+        window.onload = function() {
+            const newPassword = document.getElementById('new_password');
+            const confirmPassword = document.getElementById('confirm_password');
+            const lengthCheck = document.getElementById('lengthCheck');
+            const capitalCheck = document.getElementById('capitalCheck');
+            const specialCheck = document.getElementById('specialCheck');
+            const numericCheck = document.getElementById('numericCheck');
+
+            function validatePassword() {
+                const password = newPassword.value;
+                const lengthValid = password.length >= 8;
+                const capitalValid = /[A-Z]/.test(password);
+                const specialValid = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+                const numericValid = /\d/.test(password);
+
+                lengthCheck.style.backgroundColor = lengthValid ? 'green' : 'red';
+                capitalCheck.style.backgroundColor = capitalValid ? 'green' : 'red';
+                specialCheck.style.backgroundColor = specialValid ? 'green' : 'red';
+                numericCheck.style.backgroundColor = numericValid ? 'green' : 'red';
+
+                if (confirmPassword.value) {
+                    confirmPassword.setCustomValidity(
+                        confirmPassword.value !== newPassword.value ? 'Passwords do not match' : ''
+                    );
+                }
+            }
+
+            newPassword.addEventListener('input', validatePassword);
+            confirmPassword.addEventListener('input', validatePassword);
+        };
+
+        // Delete account modal handling
+        function showPasswordModal() {
+            document.getElementById('passwordModal').style.display = 'block';
+            document.getElementById('passwordInput').value = '';
+        }
+
+        function closePasswordModal() {
+            document.getElementById('passwordModal').style.display = 'none';
+            document.getElementById('passwordInput').value = '';
+        }
+
+        function verifyPassword(event) {
+            event.preventDefault();
+            const password = document.getElementById('passwordInput').value;
+            fetch("{{ url_for('settings') }}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: new URLSearchParams({
+                    'verify_password': 'true',
+                    'password': password
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    closePasswordModal();
+                    document.getElementById('confirmModal').style.display = 'block';
+                } else {
+                    closePasswordModal();
+                    showErrorModal(data.error || 'Incorrect password. Please try again.');
+                    document.getElementById('passwordInput').value = '';
+                }
+            })
+            .catch(error => {
+                console.error('Error verifying password:', error);
+                showErrorModal('An error occurred. Please try again.');
+                document.getElementById('passwordInput').value = '';
+            });
+        }
+
+        function closeConfirmModal() {
+            document.getElementById('confirmModal').style.display = 'none';
+        }
+
+        function deleteAccount() {
+            fetch("{{ url_for('settings') }}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: new URLSearchParams({
+                    'delete_account': 'true',
+                    'confirm_delete': 'true'
+                })
+            })
+            .then(response => response.text())
+            .then(data => {
+                window.location.href = "{{ url_for('login') }}";
+            })
+            .catch(error => {
+                console.error('Error deleting account:', error);
+                showErrorModal('An error occurred while deleting the account. Please try again.');
+                closeConfirmModal();
+            });
+        }
+
+        function showErrorModal(message) {
+            const errorModal = document.getElementById('errorModal');
+            const errorMessage = document.getElementById('errorMessage');
+            if (errorModal && errorMessage) {
+                errorMessage.textContent = message;
+                errorModal.style.display = 'block';
+            }
+        }
+
+        function closeErrorModal() {
+            const errorModal = document.getElementById('errorModal');
+            if (errorModal) {
+                errorModal.style.display = 'none';
+            }
+        }
+    </script>
+</head>
+<body class="{{ session.get('theme', 'light') }}">
+    <header>
+        <h1>Settings - NoteVault</h1>
+        <nav>
+            <a href="{{ url_for('index') }}" class="nav-button">Back to Dashboard</a>
+            <a href="{{ url_for('view_notes') }}" class="nav-button">View Notes</a>
+            <a href="{{ url_for('create_note') }}" class="nav-button">Create Note</a>
+            <a href="{{ url_for('search_page') }}" class="nav-button">Search Note</a>
+            <a href="{{ url_for('notifications') }}" class="nav-button">Notifications
+                {% if unread_notifications > 0 %}
+                <span class="badge">{{ unread_notifications }}</span>
+                {% endif %}
+            </a>
+            <a href="{{ url_for('settings') }}" class="nav-button">Settings</a>
+            <a href="{{ url_for('logout') }}" class="nav-button">Logout</a>
+            <a href="#" class="nav-button" onclick="toggleTheme()">Toggle Theme</a>
+        </nav>
+    </header>
+    <main>
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        <div class="flash-messages">
+            {% for category, message in messages %}
+            <p class="flash-{{ category }}">{{ message }}</p>
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% endwith %}
+        <h2>Settings</h2>
+        <div class="section">
+            <h3>Theme</h3>
+            <p>Current Theme: {{ 'Dark' if session.get('theme') == 'dark' else 'Light' }}</p>
+            <a href="{{ url_for('toggle_theme') }}" class="button">Switch to {{ 'Light' if session.get('theme') == 'dark' else 'Dark' }} Mode</a>
+        </div>
+        <div class="section">
+            <h3>Notification Preferences</h3>
+            <form method="post">
+                <input type="hidden" name="email_notifications" value="off">
+                <label>
+                    <input type="checkbox" name="email_notifications" value="on" {% if user.email_notifications %}checked{% endif %}>
+                    Receive email notifications for collaboration invitations
+                </label>
+                <br>
+                <button type="submit" class="button">Save</button>
+            </form>
+        </div>
+        <div class="section">
+            <h3>Account Management</h3>
+            <p>Email: {{ user.email }}</p>
+            <h4>Change Password</h4>
+            <form method="post" onsubmit="return validatePasswordForm()">
+                <label>Current Password:
+                    <div class="password-container">
+                        <input type="password" id="current_password" name="current_password" required>
+                        <span id="eye-icon-current" class="eye-icon" onclick="togglePasswordVisibility('current_password', 'eye-icon-current')">👁️</span>
+                    </div>
+                </label>
+                <br>
+                <label>New Password:
+                    <div class="password-container">
+                        <input type="password" id="new_password" name="new_password" required>
+                        <span id="eye-icon-new" class="eye-icon" onclick="togglePasswordVisibility('new_password', 'eye-icon-new')">👁️</span>
+                    </div>
+                </label>
+                <br>
+                <label>Confirm New Password:
+                    <div class="password-container">
+                        <input type="password" id="confirm_password" name="confirm_password" required>
+                        <span id="eye-icon-confirm" class="eye-icon" onclick="togglePasswordVisibility('confirm_password', 'eye-icon-confirm')">👁️</span>
+                    </div>
+                </label>
+                <br>
+                <p>Password must include:</p>
+                <p><span id="lengthCheck" class="password-check"></span> 8 characters long</p>
+                <p><span id="capitalCheck" class="password-check"></span> 1 Capital Alphabet</p>
+                <p><span id="specialCheck" class="password-check"></span> 1 Special character</p>
+                <p><span id="numericCheck" class="password-check"></span> 1 Numeric character</p>
+                <br>
+                <button type="submit" class="button">Update Password</button>
+            </form>
+            <h4>Delete Account</h4>
+            <button onclick="showPasswordModal()" class="button delete">Delete Account</button>
+            <!-- Password Modal -->
+            <div id="passwordModal" class="modal">
+                <div class="modal-content">
+                    <h3>Enter your password:</h3>
+                    <form onsubmit="verifyPassword(event)">
+                        <input type="password" id="passwordInput" placeholder="Enter your password" required>
+                        <br>
+                        <button type="submit" class="confirm">Submit</button>
+                        <button type="button" class="cancel" onclick="closePasswordModal()">Cancel</button>
+                    </form>
+                </div>
+            </div>
+            <!-- Confirmation Modal -->
+            <div id="confirmModal" class="modal">
+                <div class="modal-content">
+                    <h3>Are you sure you want to delete this account?</h3>
+                    <button class="confirm" onclick="deleteAccount()">Yes</button>
+                    <button class="cancel" onclick="closeConfirmModal()">No</button>
+                </div>
+            </div>
+            <!-- Success Modal -->
+            <div id="successModal" class="modal">
+                <div class="modal-content">
+                    <h3>The account has been deleted successfully</h3>
+                    <button class="ok" onclick="closeSuccessModal()">OK</button>
+                </div>
+            </div>
+            <!-- Error Modal -->
+            <div id="errorModal" class="modal">
+                <div class="modal-content">
+                    <h3>NoteVault</h3>
+                    <p id="errorMessage"></p>
+                    <button class="ok" onclick="closeErrorModal()">OK</button>
+                </div>
+            </div>
+        </div>
+    </main>
+</body>
+</html>
