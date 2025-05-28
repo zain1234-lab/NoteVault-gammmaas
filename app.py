@@ -966,7 +966,7 @@ def settings():
 @app.route('/toggle_theme')
 def toggle_theme():
     session['theme'] = 'dark' if session.get('theme') != 'dark' else 'light'
-    return redirect(request.referrer or url_for('settings'))
+    return redirect(url_for('settings'))
 
 @app.route('/search_page')
 def search_page():
